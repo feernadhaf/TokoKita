@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:testtoko/login_screen.dart';
+import 'package:testtoko/auth_services.dart';
 import 'package:testtoko/theme/app_theme.dart';
 
 // =========================
@@ -23,6 +23,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
   bool _agreeToTerms = false;
+  bool _isSubmitting = false;
 
   @override
   void dispose() {
@@ -33,7 +34,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     super.dispose();
   }
 
-  void _handleRegister() {
+  void _handleRegister() async {
     if (!_agreeToTerms) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -42,16 +43,31 @@ class _RegisterScreenState extends State<RegisterScreen> {
       );
       return;
     }
-    if (_formKey.currentState!.validate()) {
-      // TODO: sambungkan ke proses registrasi/auth yang sebenarnya.
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const LoginScreen()),
-      );
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() => _isSubmitting = true);
+
+    final result = await AuthServices.register(
+      name: _nameController.text,
+      email: _emailController.text,
+      password: _passwordController.text,
+    );
+
+    if (!mounted) return;
+    setState(() => _isSubmitting = false);
+
+    if (!result.success) {
+      // Gagal — misal email udah pernah dipakai daftar sebelumnya.
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Akun berhasil dibuat, silakan login')),
+        SnackBar(content: Text(result.errorMessage ?? 'Gagal mendaftar')),
       );
+      return;
     }
+
+    Navigator.pushReplacementNamed(context, '/login');
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Akun berhasil dibuat, silakan login')),
+    );
   }
 
   @override
@@ -132,8 +148,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: _handleRegister,
-                    child: const Text('Daftar'),
+                    onPressed: _isSubmitting ? null : _handleRegister,
+                    child: _isSubmitting
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2.2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const Text('Daftar'),
                   ),
                 ),
                 const SizedBox(height: 28),
@@ -151,12 +176,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       ),
                       InkWell(
                         onTap: () {
-                          Navigator.pushReplacement(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const LoginScreen(),
-                            ),
-                          );
+                          Navigator.pushReplacementNamed(context, '/login');
                         },
                         child: const Text(
                           'Masuk',

@@ -80,4 +80,64 @@ class AppTheme {
           offset: const Offset(0, 6),
         ),
       ];
+
+  // Gambar produk bisa dari asset lokal (dummy) ATAU URL internet (API).
+  // Helper ini otomatis pilih Image.network kalau path-nya URL,
+  // atau Image.asset kalau path lokal.
+  static Widget productImage(
+    String path, {
+    double? width,
+    double? height,
+    BoxFit fit = BoxFit.cover,
+  }) {
+    final isNetwork = path.startsWith('http://') || path.startsWith('https://');
+
+    if (isNetwork) {
+      return Image.network(
+        path,
+        width: width,
+        height: height,
+        fit: fit,
+        loadingBuilder: (context, child, progress) {
+          if (progress == null) return child;
+          return Container(
+            width: width,
+            height: height,
+            color: AppColors.primaryLight,
+            child: const Center(
+              child: SizedBox(
+                width: 22,
+                height: 22,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2.2,
+                  color: AppColors.primary,
+                ),
+              ),
+            ),
+          );
+        },
+        errorBuilder: (context, error, stackTrace) => Container(
+          width: width,
+          height: height,
+          color: AppColors.primaryLight,
+          child: const Icon(Icons.broken_image_outlined,
+              color: AppColors.textSecondary),
+        ),
+      );
+    }
+
+    return Image.asset(
+      path,
+      width: width,
+      height: height,
+      fit: fit,
+      errorBuilder: (context, error, stackTrace) => Container(
+        width: width,
+        height: height,
+        color: AppColors.primaryLight,
+        child: const Icon(Icons.broken_image_outlined,
+            color: AppColors.textSecondary),
+      ),
+    );
+  }
 }

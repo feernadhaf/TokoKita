@@ -1,47 +1,50 @@
-
-
 import '../models/model_produk.dart';
 
+// =========================
+// DUMMY PRODUK
+// NOTE: `image` sekarang nunjuk ke asset lokal (assets/img/...)
+// bukan URL internet lagi. Pastikan folder ini udah didaftarin di pubspec.yaml.
+// =========================
+
 final List<Product> products = [
-    Product(
-      name: 'Wireless Headphone',
-      image:
-          'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQXSWlmAmqHwcXNWOCd8lrgIDMwARoi8T5BStYY8GY1GQ&s=10',
-      price: 250000,
-    ),
-    Product(
-      name: 'Smart Watch',
-      image: 'https://picsum.photos/300/300?random=11',
-      price: 450000,
-    ),
-    Product(
-      name: 'Running Shoes',
-      image: 'https://picsum.photos/300/300?random=12',
-      price: 350000,
-    ),
-    Product(
-      name: 'Backpack',
-      image: 'https://picsum.photos/300/300?random=13',
-      price: 180000,
-    ),
-    Product(
-      name: 'Mechanical Keyboard',
-      image: 'https://picsum.photos/300/300?random=14',
-      price: 650000,
-    ),
-    Product(
-      name: 'Gaming Mouse',
-      image: 'https://picsum.photos/300/300?random=15',
-      price: 300000,
-    ),
-    Product(
-      name: 'T-Shirt',
-      image: 'https://picsum.photos/300/300?random=16',
-      price: 120000,
-    ),
-    Product(
-      name: 'Coffee Maker',
-      image: 'https://picsum.photos/300/300?random=17',
-      price: 550000,
-    ),
-  ];
+  Product(
+    name: 'Sony WH-1000XM Headphone',
+    image: 'assets/img/sony_headphone.png',
+    price: 3499000,
+  ),
+  Product(
+    name: 'UMEOX Smart Watch',
+    image: 'assets/img/smartwatch.png',
+    price: 450000,
+  ),
+  Product(
+    name: 'Sepatu Lari Adizero',
+    image: 'assets/img/running_shoes.png',
+    price: 1850000,
+  ),
+  Product(
+    name: 'Backpack Kulit Minimalis',
+    image: 'assets/img/backpack.png',
+    price: 620000,
+  ),
+  Product(
+    name: 'Keyboard Mechanical 75%',
+    image: 'assets/img/keyboard.png',
+    price: 1250000,
+  ),
+  Product(
+    name: 'Lamzu Maya X Wireless Mouse',
+    image: 'assets/img/gaming_mouse.png',
+    price: 899000,
+  ),
+  Product(
+    name: 'Kaos Oversize Basic',
+    image: 'assets/img/tshirt.png',
+    price: 149000,
+  ),
+  Product(
+    name: 'Breville Espresso Machine',
+    image: 'assets/img/coffee_machine.png',
+    price: 8750000,
+  ),
+];

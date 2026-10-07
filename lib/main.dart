@@ -1,21 +1,37 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:testtoko/services/session_services.dart';
 import 'package:testtoko/feeds_screen.dart';
 import 'package:testtoko/home_screen.dart';
 import 'package:testtoko/login_screen.dart';
 import 'package:testtoko/mall_screen.dart';
 import 'package:testtoko/profile_screen.dart';
+import 'package:testtoko/register_screen.dart';
 import 'package:testtoko/theme/app_theme.dart';
 import 'package:testtoko/transactions_screen.dart';
+
+import 'splah_screen.dart';
 
 
 
 /// Flutter code sample for [NavigationBar].
 
-void main() => runApp(const NavigationBarApp());
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Cek dulu apakah user udah pernah login sebelumnya (SessionServices).
+  // Kalau udah, langsung buka Home; kalau belum, buka Login seperti biasa.
+  final isLoggedIn = await SessionServices.isLogin();
+
+  runApp(NavigationBarApp(
+    initialRoute: isLoggedIn ? '/home' : '/login',
+  ));
+}
 
 class NavigationBarApp extends StatelessWidget {
-  const NavigationBarApp({super.key});
+  final String initialRoute;
+
+  const NavigationBarApp({super.key, required this.initialRoute});
 
   @override
   Widget build(BuildContext context) {
@@ -23,7 +39,17 @@ class NavigationBarApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: AppTheme.theme,
       themeMode: AppTheme.themeMode, // dikunci ke light, ga peduli setting laptop/HP
-      home: const LoginScreen(), // pintu masuk: wajib login dulu
+
+      // Halaman pertama yang dibuka — ditentukan dari status login user (lihat main() di atas)
+      initialRoute:'/splash', // initialRoute, bisa diubah ke '/home' atau '/login' sesuai kebutuhan
+
+      // Daftar route
+      routes: {
+        '/login': (context) => const LoginScreen(),
+        '/register': (context) => const RegisterScreen(),
+        '/home': (context) => const NavigationExample(),
+        '/splash': (context) => const SplashScreen(),
+      },
     );
   }
 }
@@ -63,6 +89,116 @@ class _NavigationExampleState extends State<NavigationExample> {
         });
       }
     }
+  }
+
+  // Biar dialog "Login Berhasil!" cuma muncul sekali
+  bool dialogsSudahMuncul = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+
+    if (dialogsSudahMuncul) return;
+    dialogsSudahMuncul = true;
+
+    // Ambil data yang dikirim dari LoginScreen lewat Navigator arguments
+    final arguments =
+        ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+
+    final datadiri = arguments?['data'];
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (datadiri != null) {
+        _showWelcomeDialog(datadiri);
+      }
+    });
+  }
+
+  // =========================
+  // Dialog selamat datang setelah login
+  // =========================
+  void _showWelcomeDialog(Map<String, dynamic> datadiri) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppColors.card,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(24),
+        ),
+        contentPadding: const EdgeInsets.all(24),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Icon sukses
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AppColors.primaryLight,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.check_circle_rounded,
+                color: AppColors.primary,
+                size: 55,
+              ),
+            ),
+            const SizedBox(height: 18),
+
+            // Judul
+            const Text(
+              'Login Berhasil!',
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                color: AppColors.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 10),
+
+            // Nama
+            Text(
+              'Selamat datang, ${datadiri['nama']}!',
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 17,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 8),
+
+            // Role
+            Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 14,
+                vertical: 8,
+              ),
+              decoration: BoxDecoration(
+                color: AppColors.primaryLight,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                'Role: ${datadiri['role']}',
+                style: const TextStyle(
+                  color: AppColors.primary,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            // Tombol
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Lanjutkan'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -136,4 +272,4 @@ class _NavigationExampleState extends State<NavigationExample> {
       ),
     );
   }
-}
+}//

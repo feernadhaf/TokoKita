@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:testtoko/detail_produk.dart';
-
-import 'data/dummy/dummy_produk.dart';
+import 'package:testtoko/widgets/product_grid.dart';
+import 'data/dummy/dummy_kategori.dart';
+import 'data/models/model_kategori.dart';
 import 'data/models/model_produk.dart';
 import 'theme/app_theme.dart';
 
 // =========================
 // FEEDS PAGE
 // Feed vertikal ala shoppable video/foto, tiap post nempel ke 1 produk.
+// Produk ditarik dari ProductRepository yang sama kayak Home & Mall.
 // =========================
 
 class _FeedPost {
@@ -33,14 +35,13 @@ class _FeedsScreenState extends State<FeedsScreen> {
   final PageController _pageController = PageController();
   final Set<int> _likedIndexes = {};
 
-  late final List<_FeedPost> _posts = List.generate(
-    products.length,
-    (index) => _FeedPost(
-      username: '@toko_kece${index + 1}',
-      caption: 'Cek produk ini, kualitasnya juara! Buruan order sebelum kehabisan ✨',
-      product: products[index],
-    ),
-  );
+  final ProductRepository _repo = ProductRepository.instance;
+
+  @override
+  void initState() {
+    super.initState();
+    _repo.fetchProducts();
+  }
 
   @override
   void dispose() {
@@ -48,17 +49,75 @@ class _FeedsScreenState extends State<FeedsScreen> {
     super.dispose();
   }
 
+  List<_FeedPost> _buildPosts(List<Product> products) {
+    return List.generate(
+      products.length,
+      (index) => _FeedPost(
+        username: '@toko_kece${index + 1}',
+        caption:
+            'Cek produk ini, kualitasnya juara! Buruan order sebelum kehabisan ✨',
+        product: products[index],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
-      body: PageView.builder(
-        controller: _pageController,
-        scrollDirection: Axis.vertical,
-        itemCount: _posts.length,
-        itemBuilder: (context, index) {
-          return _feedItem(_posts[index], index, context);
+      body: ListenableBuilder(
+        listenable: _repo,
+        builder: (context, _) {
+          if (_repo.isLoading && _repo.products.isEmpty) {
+            return const Center(
+              child: CircularProgressIndicator(color: Colors.white),
+            );
+          }
+
+          if (_repo.errorMessage != null && _repo.products.isEmpty) {
+            return _errorState();
+          }
+
+          final posts = _buildPosts(_repo.products);
+
+          return PageView.builder(
+            controller: _pageController,
+            scrollDirection: Axis.vertical,
+            itemCount: posts.length,
+            itemBuilder: (context, index) {
+              return _feedItem(posts[index], index, context);
+            },
+          );
         },
+      ),
+    );
+  }
+
+  Widget _errorState() {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.wifi_off_rounded, size: 40, color: Colors.white54),
+          const SizedBox(height: 12),
+          Text(
+            _repo.errorMessage ?? 'Terjadi kesalahan',
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 13, color: Colors.white70),
+          ),
+          const SizedBox(height: 16),
+          OutlinedButton(
+            onPressed: () => _repo.fetchProducts(forceRefresh: true),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: Colors.white,
+              side: const BorderSide(color: Colors.white54),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            child: const Text('Coba lagi'),
+          ),
+        ],
       ),
     );
   }
@@ -73,7 +132,7 @@ class _FeedsScreenState extends State<FeedsScreen> {
       fit: StackFit.expand,
       children: [
         // Background image
-        Image.network(
+        AppTheme.productImage(
           post.product.image,
           fit: BoxFit.cover,
         ),
@@ -246,7 +305,7 @@ class _FeedsScreenState extends State<FeedsScreen> {
           children: [
             ClipRRect(
               borderRadius: BorderRadius.circular(10),
-              child: Image.network(
+              child: AppTheme.productImage(
                 product.image,
                 width: 42,
                 height: 42,

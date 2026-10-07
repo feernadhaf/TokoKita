@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
+import 'cart_page.dart';
 import 'data/models/model_produk.dart';
+import 'tanya_penjual_screen.dart';
 import 'theme/app_theme.dart';
 
 // =========================
@@ -203,7 +205,7 @@ class _DetailProdukScreenState extends State<DetailProdukScreen> {
       children: [
         AspectRatio(
           aspectRatio: 1,
-          child: Image.network(
+          child: AppTheme.productImage(
             product.image,
             width: double.infinity,
             fit: BoxFit.cover,
@@ -635,16 +637,50 @@ class _DetailProdukScreenState extends State<DetailProdukScreen> {
         top: false,
         child: Row(
           children: [
-            Container(
-              width: 50,
-              height: 50,
-              decoration: BoxDecoration(
-                color: AppColors.primaryLight,
-                borderRadius: BorderRadius.circular(14),
+            InkWell(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) =>
+                        TanyaPenjualScreen(product: widget.product),
+                  ),
+                );
+              },
+              borderRadius: BorderRadius.circular(14),
+              child: Container(
+                width: 50,
+                height: 50,
+                decoration: BoxDecoration(
+                  color: AppColors.primaryLight,
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: const Icon(
+                  Icons.chat_bubble_outline_rounded,
+                  color: AppColors.primary,
+                ),
               ),
-              child: const Icon(
-                Icons.add_shopping_cart_outlined,
-                color: AppColors.primary,
+            ),
+            const SizedBox(width: 10),
+            InkWell(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const CartPage()),
+                );
+              },
+              borderRadius: BorderRadius.circular(14),
+              child: Container(
+                width: 50,
+                height: 50,
+                decoration: BoxDecoration(
+                  color: AppColors.primaryLight,
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: const Icon(
+                  Icons.add_shopping_cart_outlined,
+                  color: AppColors.primary,
+                ),
               ),
             ),
             const SizedBox(width: 12),

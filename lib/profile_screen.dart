@@ -1,14 +1,38 @@
 import 'package:flutter/material.dart';
-import 'package:testtoko/login_screen.dart';
 
+import 'services/session_services.dart';
 import 'theme/app_theme.dart';
 
 // =========================
 // PROFILE PAGE
 // =========================
 
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
+
+  @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  String _username = '';
+  String _email = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSession();
+  }
+
+  Future<void> _loadSession() async {
+    final username = await SessionServices.getUsername();
+    final email = await SessionServices.getEmail();
+    if (!mounted) return;
+    setState(() {
+      _username = username;
+      _email = email;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -69,22 +93,22 @@ class ProfileScreen extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 14),
-        const Expanded(
+        Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Nama Pengguna',
-                style: TextStyle(
+                _username.isEmpty ? 'Nama Pengguna' : _username,
+                style: const TextStyle(
                   fontSize: 17,
                   fontWeight: FontWeight.bold,
                   color: AppColors.textPrimary,
                 ),
               ),
-              SizedBox(height: 4),
+              const SizedBox(height: 4),
               Text(
-                'user@email.com',
-                style: TextStyle(
+                _email.isEmpty ? 'user@email.com' : _email,
+                style: const TextStyle(
                   fontSize: 13,
                   color: AppColors.textSecondary,
                 ),
@@ -343,10 +367,14 @@ class ProfileScreen extends StatelessWidget {
   // =========================
   // Proses logout: kembali ke LoginScreen & bersihkan stack navigasi
   // =========================
-  void _logout(BuildContext context) {
-    // TODO: hapus session/token asli di sini kalau sudah ada auth backend.
-    Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (context) => const LoginScreen()),
+  void _logout(BuildContext context) async {
+    // Hapus status login yang disimpen SessionServices.
+    await SessionServices.logout();
+
+    if (!context.mounted) return;
+
+    Navigator.of(context).pushNamedAndRemoveUntil(
+      '/login',
       (route) => false,
     );
   }

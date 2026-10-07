@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:testtoko/detail_produk.dart';
+import 'package:testtoko/widgets/product_grid.dart';
 
 import 'data/dummy/dummy_kategori.dart';
-import 'data/dummy/dummy_produk.dart';
 import 'data/models/model_kategori.dart';
 import 'data/models/model_produk.dart';
 import 'theme/app_theme.dart';
@@ -22,11 +22,19 @@ class _MallScreenState extends State<MallScreen> {
   final PageController _bannerController = PageController();
   int _bannerIndex = 0;
 
+  final ProductRepository _repo = ProductRepository.instance;
+
   final List<Color> _bannerColors = const [
     AppColors.primary,
     Color(0xFFFF9800),
     Color(0xFF2D6CDF),
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _repo.fetchProducts();
+  }
 
   @override
   void dispose() {
@@ -40,53 +48,120 @@ class _MallScreenState extends State<MallScreen> {
       backgroundColor: AppColors.background,
       appBar: _mallAppBar(),
       body: SafeArea(
-        child: CustomScrollView(
-          slivers: [
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-              sliver: SliverToBoxAdapter(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _bannerCarousel(),
-                    const SizedBox(height: 22),
-                    _sectionTitle('Kategori Pilihan'),
-                    const SizedBox(height: 12),
-                    SizedBox(
-                      height: 96,
-                      child: ListView.separated(
-                        scrollDirection: Axis.horizontal,
-                        itemCount: categories.length,
-                        separatorBuilder: (context, index) =>
-                            const SizedBox(width: 14),
-                        itemBuilder: (context, index) {
-                          return _categoryItemView(categories[index]);
-                        },
+        child: ListenableBuilder(
+          listenable: _repo,
+          builder: (context, _) {
+            return RefreshIndicator(
+              color: AppColors.primary,
+              onRefresh: () => _repo.fetchProducts(forceRefresh: true),
+              child: CustomScrollView(
+                slivers: [
+                  SliverPadding(
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                    sliver: SliverToBoxAdapter(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _bannerCarousel(),
+                          const SizedBox(height: 22),
+                          _sectionTitle('Kategori Pilihan'),
+                          const SizedBox(height: 12),
+                          SizedBox(
+                            height: 96,
+                            child: ListView.separated(
+                              scrollDirection: Axis.horizontal,
+                              itemCount: categories.length,
+                              separatorBuilder: (context, index) =>
+                                  const SizedBox(width: 14),
+                              itemBuilder: (context, index) {
+                                return _categoryItemView(categories[index]);
+                              },
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+                          _flashSaleHeader(),
+                          const SizedBox(height: 14),
+                        ],
                       ),
                     ),
-                    const SizedBox(height: 24),
-                    _flashSaleHeader(),
-                    const SizedBox(height: 14),
-                  ],
-                ),
+                  ),
+                  _productGridSliver(),
+                ],
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  // =========================
+  // Grid produk (sliver) dengan state loading/error
+  // =========================
+  Widget _productGridSliver() {
+    if (_repo.isLoading && _repo.products.isEmpty) {
+      return const SliverToBoxAdapter(
+        child: Padding(
+          padding: EdgeInsets.symmetric(vertical: 40),
+          child: Center(
+            child: CircularProgressIndicator(color: AppColors.primary),
+          ),
+        ),
+      );
+    }
+
+    if (_repo.errorMessage != null && _repo.products.isEmpty) {
+      return SliverToBoxAdapter(child: _errorState());
+    }
+
+    return SliverPadding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
+      sliver: SliverGrid(
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
+          crossAxisSpacing: 14,
+          mainAxisSpacing: 14,
+          childAspectRatio: 0.68,
+        ),
+        delegate: SliverChildBuilderDelegate(
+          (context, index) {
+            return _productItemView(_repo.products[index], context);
+          },
+          childCount: _repo.products.length,
+        ),
+      ),
+    );
+  }
+
+  Widget _errorState() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 30),
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.wifi_off_rounded,
+                size: 36, color: AppColors.textSecondary),
+            const SizedBox(height: 10),
+            Text(
+              _repo.errorMessage ?? 'Terjadi kesalahan',
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 12.5,
+                color: AppColors.textSecondary,
               ),
             ),
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
-              sliver: SliverGrid(
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  crossAxisSpacing: 14,
-                  mainAxisSpacing: 14,
-                  childAspectRatio: 0.68,
-                ),
-                delegate: SliverChildBuilderDelegate(
-                  (context, index) {
-                    return _productItemView(products[index], context);
-                  },
-                  childCount: products.length,
+            const SizedBox(height: 12),
+            OutlinedButton(
+              onPressed: () => _repo.fetchProducts(forceRefresh: true),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.primary,
+                side: const BorderSide(color: AppColors.primary),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
                 ),
               ),
+              child: const Text('Coba lagi'),
             ),
           ],
         ),
@@ -359,7 +434,7 @@ class _MallScreenState extends State<MallScreen> {
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
-                    Image.network(
+                    AppTheme.productImage(
                       product.image,
                       width: double.infinity,
                       fit: BoxFit.cover,

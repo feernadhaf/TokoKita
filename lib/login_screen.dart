@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:testtoko/main.dart';
-import 'package:testtoko/register_screen.dart';
+import 'package:testtoko/auth_services.dart';
+import 'package:testtoko/services/session_services.dart';
 import 'package:testtoko/theme/app_theme.dart';
 
 // =========================
@@ -21,6 +21,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   bool _obscurePassword = true;
   bool _rememberMe = false;
+  bool _isSubmitting = false;
 
   @override
   void dispose() {
@@ -29,14 +30,46 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  void _handleLogin() {
-    if (_formKey.currentState!.validate()) {
-      // TODO: sambungkan ke proses login/auth yang sebenarnya.
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (context) => NavigationExample()),
-        (route) => false,
+  void _handleLogin() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() => _isSubmitting = true);
+
+    final result = await AuthServices.login(
+      email: _emailController.text,
+      password: _passwordController.text,
+    );
+
+    if (!mounted) return;
+    setState(() => _isSubmitting = false);
+
+    if (!result.success) {
+      // Gagal — email belum terdaftar atau password salah.
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(result.errorMessage ?? 'Login gagal')),
       );
+      return;
     }
+
+    final nama = result.user!['name'] ?? '';
+    final email = result.user!['email'] ?? '';
+
+    // Simpan status login (nama & email ASLI dari akun yang terdaftar)
+    // biar user gak perlu login ulang tiap buka app.
+    await SessionServices.login(nama, email);
+
+    if (!mounted) return;
+
+    Navigator.of(context).pushNamedAndRemoveUntil(
+      '/home',
+      (route) => false,
+      arguments: {
+        'data': {
+          'nama': nama,
+          'role': 'Pembeli',
+        },
+      },
+    );
   }
 
   @override
@@ -118,8 +151,17 @@ class _LoginScreenState extends State<LoginScreen> {
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: _handleLogin,
-                    child: const Text('Masuk'),
+                    onPressed: _isSubmitting ? null : _handleLogin,
+                    child: _isSubmitting
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2.2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const Text('Masuk'),
                   ),
                 ),
                 const SizedBox(height: 20),
@@ -129,16 +171,9 @@ class _LoginScreenState extends State<LoginScreen> {
 
                 Row(
                   children: [
-                    Expanded(
-                      child: _socialButton(
-                        Icons.g_mobiledata_rounded,
-                        'Google',
-                      ),
-                    ),
+                    Expanded(child: _socialButton(Icons.g_mobiledata_rounded, 'Google')),
                     const SizedBox(width: 12),
-                    Expanded(
-                      child: _socialButton(Icons.apple_rounded, 'Apple'),
-                    ),
+                    Expanded(child: _socialButton(Icons.apple_rounded, 'Apple')),
                   ],
                 ),
                 const SizedBox(height: 32),
@@ -156,12 +191,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       InkWell(
                         onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const RegisterScreen(),
-                            ),
-                          );
+                          Navigator.pushReplacementNamed(context, '/register');
                         },
                         child: const Text(
                           'Daftar',
@@ -240,7 +270,8 @@ class _LoginScreenState extends State<LoginScreen> {
         hint: 'Masukkan password',
         icon: Icons.lock_outline_rounded,
         suffixIcon: IconButton(
-          onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+          onPressed: () =>
+              setState(() => _obscurePassword = !_obscurePassword),
           icon: Icon(
             _obscurePassword
                 ? Icons.visibility_off_outlined

@@ -1,14 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:testtoko/cart_page.dart';
 import 'package:testtoko/detail_produk.dart';
+import 'package:testtoko/widgets/product_grid.dart';
 
 import 'data/dummy/dummy_kategori.dart';
-import 'data/dummy/dummy_produk.dart';
 import 'data/models/model_kategori.dart';
 import 'data/models/model_produk.dart';
+import 'package:testtoko/data/models/cart_item.dart';
 import 'theme/app_theme.dart';
 
 // =========================
 // HOME PAGE
+// Produk ditarik dari ProductRepository (shared, fetch sekali,
+// dipakai bareng sama Mall & Feeds). Kategori masih dummy.
 // =========================
 
 class HomeScreen extends StatefulWidget {
@@ -19,9 +23,19 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  final PageController _bannerController = PageController(viewportFraction: 0.92);
+  final PageController _bannerController = PageController(
+    viewportFraction: 0.92,
+  );
   int _bannerIndex = 0;
   final Set<String> _favoriteNames = {};
+
+  final ProductRepository _repo = ProductRepository.instance;
+
+  @override
+  void initState() {
+    super.initState();
+    _repo.fetchProducts();
+  }
 
   @override
   void dispose() {
@@ -34,72 +48,155 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
-        child: CustomScrollView(
-          slivers: [
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-              sliver: SliverToBoxAdapter(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _topBar(),
-                    const SizedBox(height: 20),
-                    _greetingRow(),
-                    const SizedBox(height: 18),
-                    _bannerCarousel(),
-                    const SizedBox(height: 24),
-                    _sectionHeader('Kategori'),
-                    const SizedBox(height: 12),
-                    SizedBox(
-                      height: 96,
-                      child: ListView.separated(
-                        scrollDirection: Axis.horizontal,
-                        itemCount: categories.length,
-                        separatorBuilder: (context, index) =>
-                            const SizedBox(width: 14),
-                        itemBuilder: (context, index) {
-                          return _categoryItemView(categories[index]);
-                        },
+        child: ListenableBuilder(
+          listenable: _repo,
+          builder: (context, _) {
+            return RefreshIndicator(
+              color: AppColors.primary,
+              onRefresh: () => _repo.fetchProducts(forceRefresh: true),
+              child: CustomScrollView(
+                slivers: [
+                  SliverPadding(
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                    sliver: SliverToBoxAdapter(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _topBar(),
+                          const SizedBox(height: 20),
+                          _greetingRow(),
+                          const SizedBox(height: 18),
+                          _bannerCarousel(),
+                          const SizedBox(height: 24),
+                          _sectionHeader('Kategori'),
+                          const SizedBox(height: 12),
+                          SizedBox(
+                            height: 96,
+                            child: ListView.separated(
+                              scrollDirection: Axis.horizontal,
+                              itemCount: categories.length,
+                              separatorBuilder: (context, index) =>
+                                  const SizedBox(width: 14),
+                              itemBuilder: (context, index) {
+                                return _categoryItemView(categories[index]);
+                              },
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+                          _sectionHeader('Promo Hari Ini 🔥'),
+                          const SizedBox(height: 12),
+                          _promoSection(),
+                          const SizedBox(height: 24),
+                          _sectionHeader('Produk Terbaru'),
+                          const SizedBox(height: 14),
+                        ],
                       ),
                     ),
-                    const SizedBox(height: 24),
-                    _sectionHeader('Promo Hari Ini 🔥'),
-                    const SizedBox(height: 12),
-                    SizedBox(
-                      height: 210,
-                      child: ListView.separated(
-                        scrollDirection: Axis.horizontal,
-                        itemCount: products.length,
-                        separatorBuilder: (context, index) =>
-                            const SizedBox(width: 14),
-                        itemBuilder: (context, index) {
-                          return _promoItemView(products[index], context);
-                        },
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    _sectionHeader('Produk Terbaru'),
-                    const SizedBox(height: 14),
-                  ],
-                ),
+                  ),
+                  _productGridSliver(),
+                ],
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  // =========================
+  // Promo section (horizontal) dengan state loading/error
+  // =========================
+  Widget _promoSection() {
+    if (_repo.isLoading && _repo.products.isEmpty) {
+      return const SizedBox(
+        height: 210,
+        child: Center(
+          child: CircularProgressIndicator(color: AppColors.primary),
+        ),
+      );
+    }
+
+    if (_repo.errorMessage != null && _repo.products.isEmpty) {
+      return _errorState();
+    }
+
+    return SizedBox(
+      height: 210,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: _repo.products.length,
+        separatorBuilder: (context, index) => const SizedBox(width: 14),
+        itemBuilder: (context, index) {
+          return _promoItemView(_repo.products[index], context);
+        },
+      ),
+    );
+  }
+
+  // =========================
+  // Grid produk (sliver) dengan state loading/error
+  // =========================
+  Widget _productGridSliver() {
+    if (_repo.isLoading && _repo.products.isEmpty) {
+      return const SliverToBoxAdapter(
+        child: Padding(
+          padding: EdgeInsets.symmetric(vertical: 40),
+          child: Center(
+            child: CircularProgressIndicator(color: AppColors.primary),
+          ),
+        ),
+      );
+    }
+
+    if (_repo.errorMessage != null && _repo.products.isEmpty) {
+      return SliverToBoxAdapter(child: _errorState());
+    }
+
+    return SliverPadding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
+      sliver: SliverGrid(
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
+          crossAxisSpacing: 14,
+          mainAxisSpacing: 14,
+          childAspectRatio: 0.68,
+        ),
+        delegate: SliverChildBuilderDelegate((context, index) {
+          return _productItemView(_repo.products[index], context);
+        }, childCount: _repo.products.length),
+      ),
+    );
+  }
+
+  Widget _errorState() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 30),
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.wifi_off_rounded,
+                size: 36, color: AppColors.textSecondary),
+            const SizedBox(height: 10),
+            Text(
+              _repo.errorMessage ?? 'Terjadi kesalahan',
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 12.5,
+                color: AppColors.textSecondary,
               ),
             ),
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
-              sliver: SliverGrid(
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  crossAxisSpacing: 14,
-                  mainAxisSpacing: 14,
-                  childAspectRatio: 0.68,
-                ),
-                delegate: SliverChildBuilderDelegate(
-                  (context, index) {
-                    return _productItemView(products[index], context);
-                  },
-                  childCount: products.length,
+            const SizedBox(height: 12),
+            OutlinedButton(
+              onPressed: () => _repo.fetchProducts(forceRefresh: true),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.primary,
+                side: const BorderSide(color: AppColors.primary),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
                 ),
               ),
+              child: const Text('Coba lagi'),
             ),
           ],
         ),
@@ -143,24 +240,41 @@ class _HomeScreenState extends State<HomeScreen> {
         const SizedBox(width: 12),
         _iconWithBadge(icon: Icons.chat_bubble_outline, count: 3),
         const SizedBox(width: 10),
-        _iconWithBadge(icon: Icons.shopping_cart_outlined, count: 2),
+        _iconWithBadge(
+          icon: Icons.shopping_cart_outlined,
+          count: 2,
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const CartPage()),
+            );
+          },
+        ),
       ],
     );
   }
 
-  Widget _iconWithBadge({required IconData icon, required int count}) {
-    return Container(
-      width: 44,
-      height: 44,
-      decoration: BoxDecoration(
-        color: AppColors.card,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: AppTheme.cardShadow,
-      ),
-      child: Badge(
-        label: Text('$count'),
-        backgroundColor: AppColors.accent,
-        child: Icon(icon, color: AppColors.textPrimary, size: 22),
+  Widget _iconWithBadge({
+    required IconData icon,
+    required int count,
+    VoidCallback? onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        width: 44,
+        height: 44,
+        decoration: BoxDecoration(
+          color: AppColors.card,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: AppTheme.cardShadow,
+        ),
+        child: Badge(
+          label: Text('$count'),
+          backgroundColor: AppColors.accent,
+          child: Icon(icon, color: AppColors.textPrimary, size: 22),
+        ),
       ),
     );
   }
@@ -458,7 +572,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: Stack(
                     fit: StackFit.expand,
                     children: [
-                      Image.network(
+                      AppTheme.productImage(
                         product.image,
                         width: double.infinity,
                         fit: BoxFit.cover,
@@ -585,7 +699,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
-                    Image.network(
+                    AppTheme.productImage(
                       product.image,
                       width: double.infinity,
                       fit: BoxFit.cover,
@@ -605,8 +719,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         child: const Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.star,
-                                size: 12, color: AppColors.accent),
+                            Icon(Icons.star, size: 12, color: AppColors.accent),
                             SizedBox(width: 3),
                             Text(
                               '4.8',

@@ -1,76 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:testtoko/data/dummy/dummy_transaksi.dart';
+import 'package:testtoko/data/models/model_produk_transaksi.dart';
 
-import 'data/dummy/dummy_produk.dart';
-import 'data/models/model_produk.dart';
+import 'data/dummy/dummy_transactions.dart';
+import 'data/models/model_transactions.dart';
+import 'detail_produk.dart';
+import 'order_tracking_screen.dart';
 import 'theme/app_theme.dart';
 
 // =========================
 // TRANSACTIONS PAGE
 // =========================
-
-enum _TxStatus { diproses, dikirim, selesai, dibatalkan }
-
-extension on _TxStatus {
-  String get label {
-    switch (this) {
-      case _TxStatus.diproses:
-        return 'Diproses';
-      case _TxStatus.dikirim:
-        return 'Dikirim';
-      case _TxStatus.selesai:
-        return 'Selesai';
-      case _TxStatus.dibatalkan:
-        return 'Dibatalkan';
-    }
-  }
-
-  Color get color {
-    switch (this) {
-      case _TxStatus.diproses:
-        return AppColors.accent;
-      case _TxStatus.dikirim:
-        return AppColors.primary;
-      case _TxStatus.selesai:
-        return AppColors.primary;
-      case _TxStatus.dibatalkan:
-        return Colors.redAccent;
-    }
-  }
-
-  IconData get icon {
-    switch (this) {
-      case _TxStatus.diproses:
-        return Icons.autorenew_rounded;
-      case _TxStatus.dikirim:
-        return Icons.local_shipping_outlined;
-      case _TxStatus.selesai:
-        return Icons.check_circle_outline_rounded;
-      case _TxStatus.dibatalkan:
-        return Icons.cancel_outlined;
-    }
-  }
-}
-
-class _Transaction {
-  final String orderId;
-  final String date;
-  final Product product;
-  final int quantity;
-  final _TxStatus status;
-
-  _Transaction({
-    required this.orderId,
-    required this.date,
-    required this.product,
-    required this.quantity,
-    required this.status,
-  });
-
-  num get total {
-    final price = num.tryParse(product.price.toString()) ?? 0;
-    return price * quantity;
-  }
-}
 
 class TransactionsScreen extends StatefulWidget {
   const TransactionsScreen({super.key});
@@ -91,19 +31,7 @@ class _TransactionsScreenState extends State<TransactionsScreen>
     'Dibatalkan',
   ];
 
-  late final List<_Transaction> _transactions = List.generate(
-    products.length,
-    (index) {
-      final statuses = _TxStatus.values;
-      return _Transaction(
-        orderId: 'INV/2026/${(1000 + index).toString()}',
-        date: '${(index % 28) + 1} Sep 2026',
-        product: products[index],
-        quantity: (index % 3) + 1,
-        status: statuses[index % statuses.length],
-      );
-    },
-  );
+  final List<Transaction> _transactions = transactions;
 
   @override
   void initState() {
@@ -128,7 +56,7 @@ class _TransactionsScreenState extends State<TransactionsScreen>
     return 'Rp $buffer';
   }
 
-  List<_Transaction> _filteredFor(String tab) {
+  List<Transaction> _filteredFor(String tab) {
     if (tab == 'Semua') return _transactions;
     return _transactions.where((tx) => tx.status.label == tab).toList();
   }
@@ -218,7 +146,7 @@ class _TransactionsScreenState extends State<TransactionsScreen>
   // =========================
   // Card transaksi
   // =========================
-  Widget _transactionCard(_Transaction tx) {
+  Widget _transactionCard(Transaction tx) {
     return Container(
       decoration: BoxDecoration(
         color: AppColors.card,
@@ -268,7 +196,7 @@ class _TransactionsScreenState extends State<TransactionsScreen>
               children: [
                 ClipRRect(
                   borderRadius: BorderRadius.circular(10),
-                  child: Image.network(
+                  child: AppTheme.productImage(
                     tx.product.image,
                     width: 54,
                     height: 54,
@@ -331,7 +259,7 @@ class _TransactionsScreenState extends State<TransactionsScreen>
                     ),
                   ],
                 ),
-                _actionButton(tx.status),
+                _actionButton(tx, context),
               ],
             ),
           ),
@@ -340,7 +268,7 @@ class _TransactionsScreenState extends State<TransactionsScreen>
     );
   }
 
-  Widget _statusBadge(_TxStatus status) {
+  Widget _statusBadge(TxStatus status) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
@@ -365,25 +293,43 @@ class _TransactionsScreenState extends State<TransactionsScreen>
     );
   }
 
-  Widget _actionButton(_TxStatus status) {
+  Widget _actionButton(Transaction tx, BuildContext context) {
     late final String label;
-    switch (status) {
-      case _TxStatus.diproses:
+    switch (tx.status) {
+      case TxStatus.diproses:
         label = 'Lacak Pesanan';
         break;
-      case _TxStatus.dikirim:
+      case TxStatus.dikirim:
         label = 'Lihat Resi';
         break;
-      case _TxStatus.selesai:
+      case TxStatus.selesai:
         label = 'Beli Lagi';
         break;
-      case _TxStatus.dibatalkan:
+      case TxStatus.dibatalkan:
         label = 'Pesan Lagi';
         break;
     }
 
     return OutlinedButton(
-      onPressed: () {},
+      onPressed: () {
+        if (tx.status == TxStatus.selesai) {
+          // Beli Lagi -> lempar ke halaman detail produk
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => DetailProdukScreen(product: tx.product),
+            ),
+          );
+        } else {
+          // Lacak Pesanan, Lihat Resi, Pesan Lagi -> halaman lacak pesanan
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => OrderTrackingScreen(transaction: tx),
+            ),
+          );
+        }
+      },
       style: OutlinedButton.styleFrom(
         foregroundColor: AppColors.primary,
         side: const BorderSide(color: AppColors.primary),
