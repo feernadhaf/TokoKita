@@ -191,7 +191,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       InkWell(
                         onTap: () {
-                          Navigator.pushReplacementNamed(context, '/register');
+                          Navigator.pushNamed(context, '/register');
                         },
                         child: const Text(
                           'Daftar',

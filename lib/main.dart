@@ -1,54 +1,39 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
-import 'package:testtoko/services/session_services.dart';
 import 'package:testtoko/feeds_screen.dart';
 import 'package:testtoko/home_screen.dart';
 import 'package:testtoko/login_screen.dart';
 import 'package:testtoko/mall_screen.dart';
 import 'package:testtoko/profile_screen.dart';
 import 'package:testtoko/register_screen.dart';
+import 'package:testtoko/splah_screen.dart';
 import 'package:testtoko/theme/app_theme.dart';
 import 'package:testtoko/transactions_screen.dart';
-
-import 'splah_screen.dart';
 
 
 
 /// Flutter code sample for [NavigationBar].
 
-void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-
-  // Cek dulu apakah user udah pernah login sebelumnya (SessionServices).
-  // Kalau udah, langsung buka Home; kalau belum, buka Login seperti biasa.
-  final isLoggedIn = await SessionServices.isLogin();
-
-  runApp(NavigationBarApp(
-    initialRoute: isLoggedIn ? '/home' : '/login',
-  ));
-}
+void main() => runApp(const NavigationBarApp());
 
 class NavigationBarApp extends StatelessWidget {
-  final String initialRoute;
-
-  const NavigationBarApp({super.key, required this.initialRoute});
+  const NavigationBarApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       theme: AppTheme.theme,
-      themeMode: AppTheme.themeMode, // dikunci ke light, ga peduli setting laptop/HP
+      themeMode: AppTheme.themeMode, // dikunci ke light
 
-      // Halaman pertama yang dibuka — ditentukan dari status login user (lihat main() di atas)
-      initialRoute:'/splash', // initialRoute, bisa diubah ke '/home' atau '/login' sesuai kebutuhan
+      // Splash tampil pertama, dia yang nentuin lanjut ke /home atau /login
+      initialRoute: '/splash',
 
-      // Daftar route
       routes: {
+        '/splash': (context) => const SplashScreen(),
         '/login': (context) => const LoginScreen(),
         '/register': (context) => const RegisterScreen(),
         '/home': (context) => const NavigationExample(),
-        '/splash': (context) => const SplashScreen(),
       },
     );
   }
@@ -272,4 +257,4 @@ class _NavigationExampleState extends State<NavigationExample> {
       ),
     );
   }
-}//
+}
